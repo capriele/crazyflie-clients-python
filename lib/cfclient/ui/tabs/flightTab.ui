@@ -50,6 +50,23 @@
          <layout class="QHBoxLayout" name="horizontalLayout_3">
           <item>
            <layout class="QGridLayout" name="gridLayout_3">
+            <item row="5" column="0" colspan="2">
+             <widget class="QLabel" name="label_8">
+              <property name="font">
+               <font>
+                <family>Droid Sans [unknown]</family>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Modes</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
             <item row="1" column="1">
              <widget class="QComboBox" name="flightModeCombo">
               <property name="minimumSize">
@@ -141,7 +158,7 @@
                <double>20.000000000000000</double>
               </property>
               <property name="singleStep">
-               <double>0.200000000000000</double>
+               <double>0.010000000000000</double>
               </property>
              </widget>
             </item>
@@ -178,24 +195,69 @@
               </property>
              </widget>
             </item>
-            <item row="5" column="1">
-             <widget class="QCheckBox" name="crazyflieXModeCheckbox">
+            <item row="8" column="0">
+             <widget class="QRadioButton" name="clientXModeRadio">
               <property name="enabled">
                <bool>false</bool>
               </property>
               <property name="text">
-               <string>Crazyflie X-mode</string>
+               <string>Client X</string>
               </property>
-             </widget>
-            </item>
-            <item row="5" column="0">
-             <widget class="QCheckBox" name="clientXModeCheckbox">
-              <property name="text">
-               <string>Client X-mode</string>
-              </property>
+              <attribute name="buttonGroup">
+               <string notr="true">buttonGroup</string>
+              </attribute>
              </widget>
             </item>
             <item row="6" column="0">
+             <widget class="QRadioButton" name="clientCareFreeModeRadio">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="text">
+               <string>Client CareFree</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+              <attribute name="buttonGroup">
+               <string notr="true">buttonGroup</string>
+              </attribute>
+             </widget>
+            </item>
+            <item row="7" column="0">
+             <widget class="QRadioButton" name="clientPositionModeRadio">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="text">
+               <string>Client Position</string>
+              </property>
+              <attribute name="buttonGroup">
+               <string notr="true">buttonGroup</string>
+              </attribute>
+             </widget>
+            </item>
+            <item row="9" column="0">
+             <widget class="QCheckBox" name="clientHoldModeCheckbox">
+              <property name="text">
+               <string>Client Hold</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="1">
+             <widget class="QCheckBox" name="crazyflieXModeCheckbox">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="text">
+               <string>Crazyflie X</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="1">
              <widget class="QRadioButton" name="angularPidRadioButton">
               <property name="enabled">
                <bool>false</bool>
@@ -204,17 +266,33 @@
                <string>Attitide control</string>
               </property>
               <property name="checked">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
              </widget>
             </item>
-            <item row="6" column="1">
+            <item row="8" column="1">
              <widget class="QRadioButton" name="ratePidRadioButton">
               <property name="enabled">
                <bool>false</bool>
               </property>
               <property name="text">
                <string>Rate control</string>
+              </property>
+             </widget>
+            </item>
+            <item row="9" column="1">
+             <widget class="QLabel" name="emergency_stop_label">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="layoutDirection">
+               <enum>Qt::LeftToRight</enum>
+              </property>
+              <property name="text">
+               <string>Kill Switch</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
               </property>
              </widget>
             </item>
@@ -629,4 +707,7 @@
  </widget>
  <resources/>
  <connections/>
+ <buttongroups>
+  <buttongroup name="buttonGroup"/>
+ </buttongroups>
 </ui>

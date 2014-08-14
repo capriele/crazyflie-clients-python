@@ -92,7 +92,15 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
         self.detectExitapp.clicked.connect(lambda : self.doButtonDetect("exitapp", "Exit application",
                                                     "Press the button for the exiting the application"))
         self.detectAltHold.clicked.connect(lambda : self.doButtonDetect("althold", "Altitude hold",
-                                                    "Press the button for altitude hold mode activation (releasing returns to manual mode)"))        
+                                                    "Press the button for altitude hold mode activation (releasing returns to manual mode)"))   
+        self.detectFlipLeft.clicked.connect(lambda : self.doButtonDetect("flipleft", "Flip Left",
+                                                    "Press the button for Flip Left"))  
+        self.detectFlipRight.clicked.connect(lambda : self.doButtonDetect("flipright", "Flip Right",
+                                                    "Press the button for Flip Right"))  
+        self.detectCalibrate.clicked.connect(lambda : self.doButtonDetect("calibrate", "Calibrate",
+                                                    "Press the button for calibrate the motors"))    
+        self.detectSwitchMode.clicked.connect(lambda : self.doButtonDetect("switchmode", "Switch Mode",
+                                                    "Press the button for changing fly modes"))        
 
         self.configButton.clicked.connect(self.startConfigOfInputDevice)
         self.loadButton.clicked.connect(self.loadConfig)
@@ -105,7 +113,9 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
                               self.detectPitchPos, self.detectPitchNeg,
                               self.detectRollPos, self.detectRollNeg,
                               self.detectKillswitch, self.detectExitapp,
-                              self.detectAltHold]
+                              self.detectAltHold, self.detectFlipLeft, 
+                              self.detectFlipRight, self.detectCalibrate, 
+                              self.detectSwitchMode]
 
         self._reset_mapping()
         self.btnDetect = ""
@@ -127,6 +137,10 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
             "killswitch": {"id":-1, "indicator": self.killswitch},
             "exitapp": {"id":-1, "indicator": self.exitapp},
             "althold": {"id":-1, "indicator": self.althold},
+            "flipleft": {"id":-1, "indicator": self.flipleft},
+            "flipright": {"id":-1, "indicator": self.flipright},
+            "calibrate": {"id":-1, "indicator": self.calibrate},
+            "switchmode": {"id":-1, "indicator": self.switchmode},
             }
 
         self.axismapping = {
@@ -285,6 +299,14 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
             newKey = "exitapp"
         if ("althold" in key):
             newKey = "althold"
+        if ("flipleft" in key):
+            newKey = "flipleft"
+        if ("flipright" in key):
+            newKey = "flipright"
+        if ("calibrate" in key):
+            newKey = "calibrate"
+        if ("switchmode" in key):
+            newKey = "switchmode"
         if (len(newKey) > 0):
             self.buttonmapping[newKey]['id'] = btnId
         else:
@@ -370,8 +392,23 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
                 
             if ("althold" in a):
                 newC['key'] = "althold"
+                newC['name'] = a  
+                
+            if ("flipright" in a):
+                newC['key'] = "flipright"
+                newC['name'] = a  
+                
+            if ("flipleft" in a):
+                newC['key'] = "flipleft"
                 newC['name'] = a               
                 
+            if ("calibrate" in a):
+                newC['key'] = "calibrate"
+                newC['name'] = a  
+                
+            if ("switchmode" in a):
+                newC['key'] = "switchmode"
+                newC['name'] = a  
 
             inputConfig['inputdevice']['axis'].append(newC)
 

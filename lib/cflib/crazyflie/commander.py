@@ -35,7 +35,8 @@ __all__ = ['Commander']
 
 from cflib.crtp.crtpstack import CRTPPacket, CRTPPort
 import struct
-
+import math
+#from cfclient.utils.input import JoystickReader #used for hold-mode
 
 class Commander():
     """
@@ -48,7 +49,22 @@ class Commander():
         +-mode (not x-mode).
         """
         self._cf = crazyflie
+
+        #########################
+        ##        MODES        ##
+        #########################
         self._x_mode = False
+        self._carefree_mode = True
+        self._position_mode = False
+        self._hold_mode = False
+
+        #########################
+        ##        UTILS        ##
+        #########################
+        self._yaw = 0            #used to convert copter's current yaw to radians
+        self._actualPoint = None #copter's current position update every 100ms
+        self._oldThrust = 0
+        self._delta = 5          #used to stabilize the copter
 
     def set_client_xmode(self, enabled):
         """
@@ -57,6 +73,36 @@ class Commander():
         """
         self._x_mode = enabled
 
+    def set_client_carefreemode(self, enabled):
+        """
+        Enable/disable the client side CareFree-mode. 
+        When enabled this recalculates the setpoints before sending them to the Crazyflie
+        so that the copter direction is indipendent from its current yaw.
+        """
+        self._carefree_mode = enabled
+
+    def set_client_positionmode(self, enabled):
+        """
+        Enable/disable the client side Position-mode. 
+        When enabled this recalculates the setpoints before sending them to the Crazyflie
+        so that the copter manteins current position.
+        N.W.: the user can only control the throttle!!!
+        """
+        self._position_mode = enabled
+
+    def set_client_holdmode(self, enabled):
+        """
+        Enable/disable the client side Position-mode. 
+        When enabled this recalculates the setpoints before sending them to the Crazyflie
+        so that the copter manteins current position.
+        N.W.: the user can control the copter normally but when he release the button the copter 
+              will mantain its current position 
+        """
+        self._hold_mode = enabled
+
+    def setActualPoint(self, data):
+        self._actualPoint = data
+
     def send_setpoint(self, roll, pitch, yaw, thrust):
         """
         Send a new control setpoint for roll/pitch/yaw/thust to the copter
@@ -64,11 +110,60 @@ class Commander():
         The arguments roll/pitch/yaw/trust is the new setpoints that should
         be sent to the copter
         """
+        if roll != 0 or pitch != 0 or yaw != 0 or thrust != 0:
+            self._oldThrust = 0
+
+        if self._actualPoint is not None:
+            self._oldThrust = self._actualPoint['stabilizer.thrust']
+
         if self._x_mode:
             roll = 0.707 * (roll - pitch)
             pitch = 0.707 * (roll + pitch)
+        elif self._carefree_mode and self._actualPoint is not None:#elif = else if
+            # roll = x, pitch = y, yaw = A, A >= 0
+            # x' = x*cos(A) - y*sin(A)
+            # y' = x*sin(A) + y*cos(A)
+            # A < 0
+            # x' =  x*cos(A) + y*sin(A)
+            # y' = -x*sin(A) + y*cos(A)
+            currentYaw = self._actualPoint["stabilizer.yaw"]
+            self._yaw = math.radians(currentYaw)
+            cosy = math.cos(self._yaw)
+            siny = math.sin(self._yaw)
+
+            #print "Roll: %3.3f -- Pitch: %3.3f -- Yaw: %3.3f" % (self._actualPoint["stabilizer.roll"], self._actualPoint["stabilizer.pitch"], currentYaw)
+            #print "Degree Yaw: %3.3f -- Radians Yaw: %3.3f" % (currentYaw, self._yaw)
+
+            roll1 = roll
+            #if self._yaw >= 0:
+            #    roll  = roll*cosy - pitch*siny
+            #    pitch = roll1*siny + pitch*cosy
+            #else:
+            roll  = roll*cosy + pitch*siny
+            pitch = pitch*cosy - roll1*siny
+
+        elif self._position_mode and self._actualPoint is not None:
+            roll = 0
+            pitch = 0
+            yaw = self._actualPoint['stabilizer.yaw']
+        
+        #if self._hold_mode and self._actualPoint is not None: #e non premo nessun tasto sul jaystick
+        #if self._hold_mode and self._oldThrust != 0: 
+        ##########################
+        ## STABILIZE THE COPTER ##
+        ##########################
+        if self._actualPoint is not None:
+            if roll == 0 and math.fabs(self._actualPoint['stabilizer.roll']) <= self._delta:
+                roll = -self._actualPoint['stabilizer.roll']/2
+            if pitch == 0 and math.fabs(self._actualPoint['stabilizer.pitch']) <= self._delta:
+                pitch = -self._actualPoint['stabilizer.pitch']/2
+            if yaw == 0 and math.fabs(self._actualPoint['stabilizer.yaw']) <= self._delta:
+                yaw = -self._actualPoint['stabilizer.yaw']/2
+                
+        #print "Roll: %3.3f -- Pitch: %3.3f -- Yaw: %3.3f" % (roll, pitch, yaw)
 
         pk = CRTPPacket()
         pk.port = CRTPPort.COMMANDER
         pk.data = struct.pack('<fffH', roll, -pitch, yaw, thrust)
         self._cf.send_packet(pk)
+

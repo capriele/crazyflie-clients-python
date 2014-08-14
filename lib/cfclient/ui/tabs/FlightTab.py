@@ -52,8 +52,7 @@ from cflib.crazyflie.log import Log, LogVariable, LogConfig
 
 from cfclient.ui.tab import Tab
 
-flight_tab_class = uic.loadUiType(sys.path[0] +
-                                  "/cfclient/ui/tabs/flightTab.ui")[0]
+flight_tab_class = uic.loadUiType(sys.path[0] + "/cfclient/ui/tabs/flightTab.ui")[0]
 
 MAX_THRUST = 65365.0
 
@@ -61,6 +60,8 @@ MAX_THRUST = 65365.0
 class FlightTab(Tab, flight_tab_class):
 
     uiSetupReadySignal = pyqtSignal()
+    
+    _mode_index = 0
 
     _motor_data_signal = pyqtSignal(int, object, object)
     _imu_data_signal = pyqtSignal(int, object, object)
@@ -70,9 +71,10 @@ class FlightTab(Tab, flight_tab_class):
     _input_updated_signal = pyqtSignal(float, float, float, float)
     _rp_trim_updated_signal = pyqtSignal(float, float)
     _emergency_stop_updated_signal = pyqtSignal(bool)
+    _switch_mode_updated_signal = pyqtSignal()
 
     _log_error_signal = pyqtSignal(object, str)
-
+    
     #UI_DATA_UPDATE_FPS = 10
 
     connectionFinishedSignal = pyqtSignal(str)
@@ -102,8 +104,10 @@ class FlightTab(Tab, flight_tab_class):
         self.helper.inputDeviceReader.rp_trim_updated.add_callback(
                                      self._rp_trim_updated_signal.emit)
         self._emergency_stop_updated_signal.connect(self.updateEmergencyStop)
-        self.helper.inputDeviceReader.emergency_stop_updated.add_callback(
-                                     self._emergency_stop_updated_signal.emit)
+        self.helper.inputDeviceReader.emergency_stop_updated.add_callback(self._emergency_stop_updated_signal.emit)
+        
+        self._switch_mode_updated_signal.connect(self.switchMode)
+        self.helper.inputDeviceReader.switch_mode_updated.add_callback(self._switch_mode_updated_signal.emit)
         
         self.helper.inputDeviceReader.althold_updated.add_callback(
                     lambda enabled: self.helper.cf.param.set_value("flightmode.althold", enabled))
@@ -128,12 +132,24 @@ class FlightTab(Tab, flight_tab_class):
         self.maxAngle.valueChanged.connect(self.maxAngleChanged)
         self.maxYawRate.valueChanged.connect(self.maxYawRateChanged)
         self.uiSetupReadySignal.connect(self.uiSetupReady)
-        self.clientXModeCheckbox.toggled.connect(self.changeXmode)
+        self.clientHoldModeCheckbox.toggled.connect(self.changeHoldmode)
         self.isInCrazyFlightmode = False
         self.uiSetupReady()
 
-        self.clientXModeCheckbox.setChecked(GuiConfig().get("client_side_xmode"))
+        self.clientHoldModeCheckbox.setChecked(GuiConfig().get("client_side_holdmode"))
 
+        self.clientCareFreeModeRadio.clicked.connect(
+                                                     lambda checked:
+                                                     self.changeCareFreemode(checked)
+                                                     )
+        self.clientPositionModeRadio.clicked.connect(
+                                                     lambda checked:
+                                                     self.changePositionmode(checked)
+                                                     )
+        self.clientXModeRadio.clicked.connect(
+                                              lambda checked:
+                                              self.changeXmode(checked)
+                                              )
         self.crazyflieXModeCheckbox.clicked.connect(
                              lambda enabled:
                              self.helper.cf.param.set_value("flightmode.x",
@@ -227,10 +243,12 @@ class FlightTab(Tab, flight_tab_class):
     
             self.ai.setRollPitch(-data["stabilizer.roll"],
                                  data["stabilizer.pitch"])
+            self.helper.cf.commander.setActualPoint(data)
 
     def connected(self, linkURI):
         # IMU & THRUST
-        lg = LogConfig("Stabalizer", GuiConfig().get("ui_update_period"))
+        #lg = LogConfig("Stabalizer", GuiConfig().get("ui_update_period"))
+        lg = LogConfig("Stabalizer", 100)
         lg.add_variable("stabilizer.roll", "float")
         lg.add_variable("stabilizer.pitch", "float")
         lg.add_variable("stabilizer.yaw", "float")
@@ -382,11 +400,12 @@ class FlightTab(Tab, flight_tab_class):
     def updateEmergencyStop(self, emergencyStop):
         if emergencyStop:
             self.setMotorLabelsEnabled(False)
-            self.emergency_stop_label.setText(
-                      self.emergencyStopStringWithText("Kill switch active"))
+            self.emergency_stop_label.setEnabled(True)
+            self.emergency_stop_label.setText(self.emergencyStopStringWithText("Kill Switch Active"))
         else:
             self.setMotorLabelsEnabled(True)
-            self.emergency_stop_label.setText("")
+            self.emergency_stop_label.setText("Kill Swith")
+            self.emergency_stop_label.setEnabled(False)
 
     def flightmodeChange(self, item):
         GuiConfig().set("flightmode", self.flightModeCombo.itemText(item))
@@ -421,9 +440,62 @@ class FlightTab(Tab, flight_tab_class):
         self.thrustLoweringSlewRateLimit.setEnabled(newState)
         self.slewEnableLimit.setEnabled(newState)
         self.maxYawRate.setEnabled(newState)
+        
+    @pyqtSlot(bool)
+    def changeCareFreemode(self, checked):
+        #self._mode_index = 0
+        self.clientCareFreeModeRadio.setChecked(checked)
+        self.helper.cf.commander.set_client_carefreemode(checked)
+        if checked:
+            self.helper.cf.commander.set_client_positionmode(False)
+            self.helper.cf.commander.set_client_xmode(False)
+        GuiConfig().set("client_side_holdmode", checked)
+        logger.info("Clientside CareFree-mode enabled: %s", checked)
+        
+    @pyqtSlot(bool)
+    def changePositionmode(self, checked):
+        #self._mode_index = 1
+        self.clientPositionModeRadio.setChecked(checked)
+        self.helper.cf.commander.set_client_positionmode(checked)
+        if checked:
+            self.helper.cf.commander.set_client_carefreemode(False)
+            self.helper.cf.commander.set_client_xmode(False)
+        GuiConfig().set("client_side_holdmode", checked)
+        logger.info("Clientside Position-mode enabled: %s", checked)
 
     @pyqtSlot(bool)
     def changeXmode(self, checked):
+        #self._mode_index = 2
+        self.clientXModeRadio.setChecked(checked)
         self.helper.cf.commander.set_client_xmode(checked)
+        if checked:
+            self.helper.cf.commander.set_client_carefreemode(False)
+            self.helper.cf.commander.set_client_positionmode(False)
         GuiConfig().set("client_side_xmode", checked)
         logger.info("Clientside X-mode enabled: %s", checked)
+        
+    @pyqtSlot(bool)
+    def changeHoldmode(self, checked):
+        self.clientHoldModeCheckbox.setChecked(checked)
+        self.helper.cf.commander.set_client_holdmode(checked)
+        GuiConfig().set("client_side_holdmode", checked)
+        logger.info("Clientside Hold-mode enabled: %s", checked)
+    
+    def switchMode(self):
+        if self._mode_index == 2:
+            self._mode_index = 0 
+        else: 
+            self._mode_index += 1
+        if self._mode_index == 0:
+            self.changeCareFreemode(True)
+            self.changePositionmode(False)
+            self.changeXmode(False)
+        elif self._mode_index == 1:
+            self.changeCareFreemode(False)
+            self.changePositionmode(True)
+            self.changeXmode(False)
+        elif self._mode_index == 2:
+            self.changeCareFreemode(False)
+            self.changePositionmode(False)
+            self.changeXmode(True)
+        logger.info("Clientside mode switched to index: %d", self._mode_index)

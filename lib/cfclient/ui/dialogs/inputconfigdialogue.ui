@@ -504,14 +504,37 @@
          <widget class="QWidget" name="gridLayoutWidget_2">
           <property name="geometry">
            <rect>
-            <x>600</x>
-            <y>200</y>
+            <x>630</x>
+            <y>70</y>
             <width>292</width>
-            <height>123</height>
+            <height>255</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_5">
-           <item row="3" column="1">
+           <item row="4" column="1">
+            <widget class="QPushButton" name="detectFlipRight">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Detect</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QCheckBox" name="flipright">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Flip Right</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="1">
             <widget class="QPushButton" name="detectExitapp">
              <property name="enabled">
               <bool>false</bool>
@@ -521,7 +544,7 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="1">
+           <item row="7" column="1">
             <widget class="QPushButton" name="detectKillswitch">
              <property name="enabled">
               <bool>false</bool>
@@ -531,7 +554,7 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
+           <item row="7" column="0">
             <widget class="QCheckBox" name="killswitch">
              <property name="enabled">
               <bool>false</bool>
@@ -544,7 +567,7 @@
              </property>
             </widget>
            </item>
-           <item row="3" column="0">
+           <item row="8" column="0">
             <widget class="QCheckBox" name="exitapp">
              <property name="enabled">
               <bool>false</bool>
@@ -557,7 +580,7 @@
              </property>
             </widget>
            </item>
-           <item row="1" column="0">
+           <item row="6" column="0">
             <widget class="QCheckBox" name="althold">
              <property name="enabled">
               <bool>false</bool>
@@ -570,13 +593,82 @@
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
+           <item row="6" column="1">
             <widget class="QPushButton" name="detectAltHold">
              <property name="enabled">
               <bool>false</bool>
              </property>
              <property name="text">
               <string>Detect</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <widget class="QCheckBox" name="flipleft">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Flip Left</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="1">
+            <widget class="QPushButton" name="detectFlipLeft">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Detect</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QPushButton" name="detectCalibrate">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Detect</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QCheckBox" name="calibrate">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Calibrate</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QPushButton" name="detectSwitchMode">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Detect</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QCheckBox" name="switchmode">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Switch Mode</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
              </property>
             </widget>
            </item>
