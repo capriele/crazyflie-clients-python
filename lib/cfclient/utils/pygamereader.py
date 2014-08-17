@@ -57,6 +57,20 @@ class PyGameReader():
         self.data["rollcal"]  = 0.0
         
         for e in pygame.event.get():
+          if e.type == pygame.locals.JOYBALLMOTION:
+            index = "Input.BALLS-%d" % e.balls 
+            try:
+                if (self.inputMap[index]["type"] == "Input.BALLS"):
+                    key = self.inputMap[index]["key"]
+                    ballsvalue = self.j.get_ball(e.balls)
+                    # All balls are in the range [-a,+a]
+                    ballsvalue = ballsvalue * self.inputMap[index]["scale"]
+                    # The value is now in the correct direction and in the range [-1,1]
+                    self.data[key] = ballsvalue
+            except Exception:
+                # Balls not mapped, ignore..
+                pass    
+            
           if e.type == pygame.locals.JOYAXISMOTION:
             index = "Input.AXIS-%d" % e.axis 
             try:
@@ -133,6 +147,7 @@ class PyGameReader():
         """Read out the raw values from the device"""
         rawaxis = {}
         rawbutton = {}
+        rawballs = {}
 
         for e in pygame.event.get():
             if e.type == pygame.locals.JOYBUTTONDOWN:
@@ -141,8 +156,10 @@ class PyGameReader():
                 rawbutton[e.button] = 0
             if e.type == pygame.locals.JOYAXISMOTION:
                 rawaxis[e.axis] = self.j.get_axis(e.axis)
+            if e.type == pygame.locals.JOYBALLMOTION:
+                rawaxis[e.balls] = self.j.get_ball(e.balls)
 
-        return [rawaxis,rawbutton]
+        return [rawaxis,rawbutton, rawballs]
 
     def getAvailableDevices(self):
         """List all the available devices."""

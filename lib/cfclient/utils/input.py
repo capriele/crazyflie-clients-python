@@ -61,7 +61,7 @@ from cfclient.utils.periodictimer import PeriodicTimer
 from cflib.utils.callbacks import Caller
 
 MAX_THRUST = 65000
-FLIP_TIME = 0.25 #time in seconds
+FLIP_TIME = 0.1 #time in seconds
 
 class JoystickReader:
     """
@@ -341,15 +341,16 @@ class JoystickReader:
             if flipright:
                 self._old_flip_type = 1;
             
-            if (flipleft or self.flipTimeControl(self._flip_time_start)) and self._old_flip_type == 0: ##and not self._old_flip:
+           # if (flipleft or self.flipTimeControl(self._flip_time_start)) and self._old_flip_type == 0: ##and not self._old_flip:
+            if flipleft and self._old_flip_type == 0: ##and not self._old_flip:
                 thrust = self.p2t(25) #faccio in modo che il robot rimanga nella posizione corrente
                 self._trim_roll = 1200
                 self.rp_trim_updated.call(self._trim_roll, self._trim_pitch)
-            else:
-                if (flipright or self.flipTimeControl(self._flip_time_start)) and self._old_flip_type == 1: ##and not self._old_flip:
-                    thrust = self.p2t(25) #faccio in modo che il robot rimanga nella posizione corrente
-                    self._trim_roll = -1200
-                    self.rp_trim_updated.call(self._trim_roll, self._trim_pitch)
+            #elif (flipright or self.flipTimeControl(self._flip_time_start)) and self._old_flip_type == 1: ##and not self._old_flip:
+            elif flipright and self._old_flip_type == 1: ##and not self._old_flip:
+                thrust = self.p2t(25) #faccio in modo che il robot rimanga nella posizione corrente
+                self._trim_roll = -1200
+                self.rp_trim_updated.call(self._trim_roll, self._trim_pitch)
                 
             self._old_flip = flipleft or flipright or self.flipTimeControl(self._flip_time_start)
             

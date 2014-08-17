@@ -113,52 +113,66 @@ class Commander():
         if roll != 0 or pitch != 0 or yaw != 0 or thrust != 0:
             self._oldThrust = 0
 
-        if self._actualPoint is not None:
-            self._oldThrust = self._actualPoint['stabilizer.thrust']
+        #if self._actualPoint is not None:
+            #self._oldThrust = self._actualPoint['stabilizer.thrust']
 
-        if self._x_mode:
-            roll = 0.707 * (roll - pitch)
-            pitch = 0.707 * (roll + pitch)
-        elif self._carefree_mode and self._actualPoint is not None:#elif = else if
+        #if self._x_mode:
+            #roll = 0.707 * (roll - pitch)
+            #pitch = 0.707 * (roll + pitch)
+        #elif self._carefree_mode and self._actualPoint is not None:#elif = else if
             # roll = x, pitch = y, yaw = A, A >= 0
             # x' = x*cos(A) - y*sin(A)
             # y' = x*sin(A) + y*cos(A)
             # A < 0
             # x' =  x*cos(A) + y*sin(A)
             # y' = -x*sin(A) + y*cos(A)
-            currentYaw = self._actualPoint["stabilizer.yaw"]
-            self._yaw = math.radians(currentYaw)
-            cosy = math.cos(self._yaw)
-            siny = math.sin(self._yaw)
+            ##currentYaw = self._actualPoint["stabilizer.yaw"]
+            ##self._yaw = math.radians(currentYaw)
+            ##cosy = math.cos(self._yaw)
+            ##siny = math.sin(self._yaw)
 
             #print "Roll: %3.3f -- Pitch: %3.3f -- Yaw: %3.3f" % (self._actualPoint["stabilizer.roll"], self._actualPoint["stabilizer.pitch"], currentYaw)
             #print "Degree Yaw: %3.3f -- Radians Yaw: %3.3f" % (currentYaw, self._yaw)
 
-            roll1 = roll
+            ##roll1 = roll
             #if self._yaw >= 0:
             #    roll  = roll*cosy - pitch*siny
             #    pitch = roll1*siny + pitch*cosy
             #else:
-            roll  = roll*cosy + pitch*siny
-            pitch = pitch*cosy - roll1*siny
+            ##roll  = roll*cosy + pitch*siny
+            ##pitch = pitch*cosy - roll1*siny
 
-        elif self._position_mode and self._actualPoint is not None:
-            roll = 0
-            pitch = 0
-            yaw = self._actualPoint['stabilizer.yaw']
+        #elif self._position_mode and self._actualPoint is not None:
+            #roll = 0
+            #pitch = 0
+            #yaw = self._actualPoint['stabilizer.yaw']
         
         #if self._hold_mode and self._actualPoint is not None: #e non premo nessun tasto sul jaystick
         #if self._hold_mode and self._oldThrust != 0: 
         ##########################
         ## STABILIZE THE COPTER ##
         ##########################
-        if self._actualPoint is not None:
-            if roll == 0 and math.fabs(self._actualPoint['stabilizer.roll']) <= self._delta:
-                roll = -self._actualPoint['stabilizer.roll']/2
-            if pitch == 0 and math.fabs(self._actualPoint['stabilizer.pitch']) <= self._delta:
-                pitch = -self._actualPoint['stabilizer.pitch']/2
-            if yaw == 0 and math.fabs(self._actualPoint['stabilizer.yaw']) <= self._delta:
-                yaw = -self._actualPoint['stabilizer.yaw']/2
+        if roll == 0 and pitch == 0 and self._actualPoint is not None:
+            accX = self._actualPoint['acc.x']
+            accY = self._actualPoint['acc.y']
+            accZ = self._actualPoint['acc.z']
+            rollAcc = math.atan2(accX, accZ)*180/math.pi
+            pitchAcc = math.atan2(accY, accZ)*180/math.pi
+            roll  -= self._actualPoint['stabilizer.roll'] + rollAcc
+            pitch -= self._actualPoint['stabilizer.pitch'] + pitchAcc
+        #if self._actualPoint is not None:
+            #if (roll == 0 and math.fabs(self._actualPoint['stabilizer.roll']) <= self._delta) or (pitch == 0 and math.fabs(self._actualPoint['stabilizer.pitch']) <= self._delta):
+            #    result = self.ComplementaryFilter(roll, pitch)
+            #    roll = result[0]
+            #    pitch = result[1]
+            #if roll == 0 and math.fabs(self._actualPoint['stabilizer.roll']) <= self._delta:
+                #roll = math.atan2(self._actualPoint['acc.x'], self._actualPoint['acc.z'])
+                #-self._actualPoint['stabilizer.roll']/2
+            #if pitch == 0 and math.fabs(self._actualPoint['stabilizer.pitch']) <= self._delta:
+                #pitch = math.atan2(self._actualPoint['acc.y'], self._actualPoint['acc.z'])
+                #-self._actualPoint['stabilizer.pitch']/2
+            #if yaw == 0 and math.fabs(self._actualPoint['stabilizer.yaw']) <= self._delta:
+            #    yaw = -self._actualPoint['stabilizer.yaw']/2
                 
         #print "Roll: %3.3f -- Pitch: %3.3f -- Yaw: %3.3f" % (roll, pitch, yaw)
 
@@ -166,4 +180,31 @@ class Commander():
         pk.port = CRTPPort.COMMANDER
         pk.data = struct.pack('<fffH', roll, -pitch, yaw, thrust)
         self._cf.send_packet(pk)
+        
+
+    def ComplementaryFilter(self, roll, pitch):
+        #ACCELEROMETER_SENSITIVITY = 8192.0
+        GYROSCOPE_SENSITIVITY = 65.536
+        dT = 1/500 # 500Hz 2 ms sample rate!
+        a = 0.93
+        b = 1-a
+        # Integrate the gyroscope data -> int(angularSpeed) = angle
+        roll  -= (self._actualPoint['stabilizer.pitch'] / GYROSCOPE_SENSITIVITY) * dT; # Angle around the X-axis
+        pitch += (self._actualPoint['stabilizer.roll'] / GYROSCOPE_SENSITIVITY) * dT; # Angle around the Y-axis
+    
+        # Compensate for drift with accelerometer data if !bullshit
+        # Sensitivity = -2 to 2 G at 16Bit -> 2G = 32768 && 0.5G = 8192
+        forceMagnitudeApprox = math.fabs(self._actualPoint['acc.x']) + math.fabs(self._actualPoint['acc.y']) + math.fabs(self._actualPoint['acc.z']);
+        if (forceMagnitudeApprox > 8192 and forceMagnitudeApprox < 32768):
+            # Turning around the Y axis results in a vector on the X-axis
+            rollAcc = math.atan2(self._actualPoint['acc.x'], self._actualPoint['acc.z']) * 180 / math.pi
+            roll = roll * a + rollAcc * b;
+    
+            # Turning around the X axis results in a vector on the Y-axis
+            pitchAcc = math.atan2(self._actualPoint['acc.y'], self._actualPoint['acc.z']) * 180 / math.pi
+            pitch = pitch * a + pitchAcc * b;
+        result = []
+        result.append(roll)
+        result.append(pitch)
+        return result
 

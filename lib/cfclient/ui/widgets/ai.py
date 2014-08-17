@@ -82,14 +82,14 @@ class AttitudeIndicator(QtGui.QWidget):
         size = self.size()
         w = size.width()
         h = size.height()
-
+        
         qp.translate(w / 2, h / 2)
         qp.rotate(self.roll)
         qp.translate(0, (self.pitch * h) / 50)
         qp.translate(-w / 2, -h / 2)
         qp.setRenderHint(qp.Antialiasing)
 
-        font = QtGui.QFont('Serif', 7, QtGui.QFont.Light)
+        font = QtGui.QFont('Serif', 8, QtGui.QFont.Light)
         qp.setFont(font)
 
         # Draw the blue
@@ -102,32 +102,32 @@ class AttitudeIndicator(QtGui.QWidget):
         qp.setBrush(QtGui.QColor(59, 41, 39))
         qp.drawRect(-w, h / 2, 3 * w, 3 * h)
 
-        pen = QtGui.QPen(QtGui.QColor(255, 255, 255), 1.5,
-            QtCore.Qt.SolidLine)
+        pen = QtGui.QPen(QtGui.QColor(255, 255, 255), 1.5, QtCore.Qt.SolidLine)
         qp.setPen(pen)
         qp.drawLine(-w, h / 2, 3 * w, h / 2)
 
         # Drawing pitch lines
+        wMax = min(w,h)*0.8
         for ofset in [-180, 0, 180]:
             for i in range(-900, 900, 25):
                 pos = (((i / 10.0) + 25 + ofset) * h / 50.0)
                 if i % 100 == 0:
-                    length = 0.35 * w
+                    length = 0.35 * wMax
                     if i != 0:
                         if ofset == 0:
-                            qp.drawText((w / 2) + (length / 2) + (w * 0.06),
+                            qp.drawText((w / 2) + (length / 2) + (wMax * 0.06),
                                         pos, "{}".format(-i / 10))
-                            qp.drawText((w / 2) - (length / 2) - (w * 0.08),
+                            qp.drawText((w / 2) - (length / 2) - (wMax * 0.08),
                                         pos, "{}".format(-i / 10))
                         else:
-                            qp.drawText((w / 2) + (length / 2) + (w * 0.06),
+                            qp.drawText((w / 2) + (length / 2) + (wMax * 0.06),
                                         pos, "{}".format(i / 10))
-                            qp.drawText((w / 2) - (length / 2) - (w * 0.08),
+                            qp.drawText((w / 2) - (length / 2) - (wMax * 0.08),
                                         pos, "{}".format(i / 10))
                 elif i % 50 == 0:
-                    length = 0.2 * w
+                    length = 0.2 * wMax
                 else:
-                    length = 0.1 * w
+                    length = 0.1 * wMax
 
                 qp.drawLine((w / 2) - (length / 2), pos,
                             (w / 2) + (length / 2), pos)
@@ -141,30 +141,25 @@ class AttitudeIndicator(QtGui.QWidget):
         qp.drawLine(0, h / 2, w, h / 2)
         
         
-        
         # Draw Hover vs Target
         
         qp.setWorldMatrixEnabled(False)
         
-        pen = QtGui.QPen(QtGui.QColor(255, 255, 255), 2,
-                         QtCore.Qt.SolidLine)
+        pen = QtGui.QPen(QtGui.QColor(255, 255, 255), 2, QtCore.Qt.SolidLine)
         qp.setBrush(QtGui.QColor(255, 255, 255))
         qp.setPen(pen)
         fh = max(7,h/50)
         font = QtGui.QFont('Sans', fh, QtGui.QFont.Light)
         qp.setFont(font)
         qp.resetTransform()
-      
-        
-
         
         qp.translate(0,h/2)      
         if not self.hover:  
-            qp.drawText(w-fh*10, fh/2, str(round(self.hoverASL,2)))  # asl
+            qp.drawText(w-fh*13, fh/2, str(round(self.hoverASL,2)))  # asl
                
         
         if self.hover:
-            qp.drawText(w-fh*10, fh/2, str(round(self.hoverTargetASL,2)))  # target asl (center)    
+            qp.drawText(w-fh*13, fh/2, str(round(self.hoverTargetASL,2)))  # target asl (center)    
             diff = round(self.hoverASL-self.hoverTargetASL,2)
             pos_y = -h/6*diff
             
@@ -180,8 +175,16 @@ class AttitudeIndicator(QtGui.QWidget):
             qp.drawLine(w-fh*4.7,0,w-fh*4.5,0) # left horizontal line
             qp.drawLine(w-fh*4.2,pos_y,w-fh*4.5,pos_y) #right horizontal line
         
-        
-        
+        r = min(w,h)
+        center = QtCore.QPoint(w/2, 0)
+        qp.setBrush(QtGui.QColor(0, 0, 0, 0))
+        pen = QtGui.QPen(QtGui.QColor(40, 40, 40), 2, QtCore.Qt.SolidLine)
+        qp.setPen(pen)
+        qp.drawEllipse(center, r/2, r/2)
+        pen = QtGui.QPen(QtGui.QColor(217, 217, 217), 2, QtCore.Qt.SolidLine)
+        qp.setPen(pen)
+        for i in range(1, max(w,h)-r/2):
+            qp.drawEllipse(center, r/2+i, r/2+i)
 
 
 if __name__ == "__main__":

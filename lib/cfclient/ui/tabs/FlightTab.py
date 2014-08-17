@@ -138,26 +138,13 @@ class FlightTab(Tab, flight_tab_class):
 
         self.clientHoldModeCheckbox.setChecked(GuiConfig().get("client_side_holdmode"))
 
-        self.clientCareFreeModeRadio.clicked.connect(
-                                                     lambda checked:
-                                                     self.changeCareFreemode(checked)
-                                                     )
-        self.clientPositionModeRadio.clicked.connect(
-                                                     lambda checked:
-                                                     self.changePositionmode(checked)
-                                                     )
-        self.clientXModeRadio.clicked.connect(
-                                              lambda checked:
-                                              self.changeXmode(checked)
-                                              )
-        self.crazyflieXModeCheckbox.clicked.connect(
-                             lambda enabled:
-                             self.helper.cf.param.set_value("flightmode.x",
-                                                            str(enabled)))
-        self.helper.cf.param.add_update_callback(
-                        group="flightmode", name="xmode",
-                        cb=( lambda name, checked:
-                        self.crazyflieXModeCheckbox.setChecked(eval(checked))))
+        #self.crazyflieXModeCheckbox.clicked.connect(
+        #                     lambda enabled:
+        #                     self.helper.cf.param.set_value("flightmode.x", str(enabled)))
+        #self.helper.cf.param.add_update_callback(
+        #                group="flightmode", name="xmode",
+        #                cb=( lambda name, checked:
+        #                self.crazyflieXModeCheckbox.setChecked(eval(checked))))
         self.ratePidRadioButton.clicked.connect(
                     lambda enabled:
                     self.helper.cf.param.set_value("flightmode.ratepid",
@@ -247,12 +234,14 @@ class FlightTab(Tab, flight_tab_class):
 
     def connected(self, linkURI):
         # IMU & THRUST
-        #lg = LogConfig("Stabalizer", GuiConfig().get("ui_update_period"))
-        lg = LogConfig("Stabalizer", 100)
+        lg = LogConfig("Stabalizer", GuiConfig().get("ui_update_period"))
         lg.add_variable("stabilizer.roll", "float")
         lg.add_variable("stabilizer.pitch", "float")
         lg.add_variable("stabilizer.yaw", "float")
         lg.add_variable("stabilizer.thrust", "uint16_t")
+        lg.add_variable("acc.x", "float")
+        lg.add_variable("acc.y", "float")
+        lg.add_variable("acc.z", "float")
 
         self.helper.cf.log.add_config(lg)
         if (lg.valid):
@@ -262,7 +251,7 @@ class FlightTab(Tab, flight_tab_class):
         else:
             logger.warning("Could not setup logconfiguration after "
                            "connection!")
-
+            
         # MOTOR
         lg = LogConfig("Motors", GuiConfig().get("ui_update_period"))
         lg.add_variable("motor.m1")
@@ -443,34 +432,39 @@ class FlightTab(Tab, flight_tab_class):
         
     @pyqtSlot(bool)
     def changeCareFreemode(self, checked):
-        #self._mode_index = 0
-        self.clientCareFreeModeRadio.setChecked(checked)
         self.helper.cf.commander.set_client_carefreemode(checked)
         if checked:
-            self.helper.cf.commander.set_client_positionmode(False)
-            self.helper.cf.commander.set_client_xmode(False)
+            self.clientCareFreeModeRadio.setChecked(checked)
+            self.helper.cf.param.set_value("FlightMode.flightmode", "0")
+            #self.helper.cf.commander.set_client_positionmode(False)
+            #self.helper.cf.commander.set_client_xmode(False)
+        elif not checked and self._mode_index == 1:
+            self.clientCareFreeModeRadio.setChecked(False)
+            self.clientNormalModeRadio.setChecked(True)
+            self.helper.cf.param.set_value("FlightMode.flightmode", "1")
+            
         GuiConfig().set("client_side_holdmode", checked)
         logger.info("Clientside CareFree-mode enabled: %s", checked)
         
     @pyqtSlot(bool)
     def changePositionmode(self, checked):
-        #self._mode_index = 1
         self.clientPositionModeRadio.setChecked(checked)
         self.helper.cf.commander.set_client_positionmode(checked)
         if checked:
-            self.helper.cf.commander.set_client_carefreemode(False)
-            self.helper.cf.commander.set_client_xmode(False)
+            self.helper.cf.param.set_value("FlightMode.flightmode", "3")
+            #self.helper.cf.commander.set_client_carefreemode(False)
+            #self.helper.cf.commander.set_client_xmode(False)
         GuiConfig().set("client_side_holdmode", checked)
         logger.info("Clientside Position-mode enabled: %s", checked)
 
     @pyqtSlot(bool)
     def changeXmode(self, checked):
-        #self._mode_index = 2
         self.clientXModeRadio.setChecked(checked)
         self.helper.cf.commander.set_client_xmode(checked)
         if checked:
-            self.helper.cf.commander.set_client_carefreemode(False)
-            self.helper.cf.commander.set_client_positionmode(False)
+            self.helper.cf.param.set_value("FlightMode.flightmode", "2")
+            #self.helper.cf.commander.set_client_carefreemode(False)
+            #self.helper.cf.commander.set_client_positionmode(False)
         GuiConfig().set("client_side_xmode", checked)
         logger.info("Clientside X-mode enabled: %s", checked)
         
@@ -482,20 +476,24 @@ class FlightTab(Tab, flight_tab_class):
         logger.info("Clientside Hold-mode enabled: %s", checked)
     
     def switchMode(self):
-        if self._mode_index == 2:
+        if self._mode_index == 3:
             self._mode_index = 0 
         else: 
             self._mode_index += 1
         if self._mode_index == 0:
             self.changeCareFreemode(True)
-            self.changePositionmode(False)
             self.changeXmode(False)
+            self.changePositionmode(False)
         elif self._mode_index == 1:
             self.changeCareFreemode(False)
-            self.changePositionmode(True)
             self.changeXmode(False)
+            self.changePositionmode(False)
         elif self._mode_index == 2:
             self.changeCareFreemode(False)
-            self.changePositionmode(False)
             self.changeXmode(True)
+            self.changePositionmode(False)
+        elif self._mode_index == 3:
+            self.changeCareFreemode(False)
+            self.changeXmode(False)
+            self.changePositionmode(True)
         logger.info("Clientside mode switched to index: %d", self._mode_index)

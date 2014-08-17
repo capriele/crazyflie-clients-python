@@ -195,42 +195,16 @@
               </property>
              </widget>
             </item>
-            <item row="8" column="0">
-             <widget class="QRadioButton" name="clientXModeRadio">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="text">
-               <string>Client X</string>
-              </property>
-              <attribute name="buttonGroup">
-               <string notr="true">buttonGroup</string>
-              </attribute>
-             </widget>
-            </item>
             <item row="6" column="0">
              <widget class="QRadioButton" name="clientCareFreeModeRadio">
               <property name="enabled">
                <bool>false</bool>
               </property>
               <property name="text">
-               <string>Client CareFree</string>
+               <string>Crazyflie CareFree</string>
               </property>
               <property name="checked">
                <bool>true</bool>
-              </property>
-              <attribute name="buttonGroup">
-               <string notr="true">buttonGroup</string>
-              </attribute>
-             </widget>
-            </item>
-            <item row="7" column="0">
-             <widget class="QRadioButton" name="clientPositionModeRadio">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="text">
-               <string>Client Position</string>
               </property>
               <attribute name="buttonGroup">
                <string notr="true">buttonGroup</string>
@@ -238,22 +212,51 @@
              </widget>
             </item>
             <item row="9" column="0">
-             <widget class="QCheckBox" name="clientHoldModeCheckbox">
+             <widget class="QRadioButton" name="clientPositionModeRadio">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
               <property name="text">
-               <string>Client Hold</string>
+               <string>Crazyflie Position</string>
               </property>
-              <property name="checked">
-               <bool>true</bool>
-              </property>
+              <attribute name="buttonGroup">
+               <string notr="true">buttonGroup</string>
+              </attribute>
              </widget>
             </item>
-            <item row="6" column="1">
-             <widget class="QCheckBox" name="crazyflieXModeCheckbox">
+            <item row="7" column="0">
+             <widget class="QRadioButton" name="clientNormalModeRadio">
               <property name="enabled">
-               <bool>true</bool>
+               <bool>false</bool>
+              </property>
+              <property name="text">
+               <string>Crazyflie +</string>
+              </property>
+              <attribute name="buttonGroup">
+               <string notr="true">buttonGroup</string>
+              </attribute>
+             </widget>
+            </item>
+            <item row="8" column="0">
+             <widget class="QRadioButton" name="clientXModeRadio">
+              <property name="enabled">
+               <bool>false</bool>
               </property>
               <property name="text">
                <string>Crazyflie X</string>
+              </property>
+              <attribute name="buttonGroup">
+               <string notr="true">buttonGroup</string>
+              </attribute>
+             </widget>
+            </item>
+            <item row="8" column="1">
+             <widget class="QRadioButton" name="ratePidRadioButton">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="text">
+               <string>Rate control</string>
               </property>
              </widget>
             </item>
@@ -270,13 +273,13 @@
               </property>
              </widget>
             </item>
-            <item row="8" column="1">
-             <widget class="QRadioButton" name="ratePidRadioButton">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
+            <item row="6" column="1">
+             <widget class="QCheckBox" name="clientHoldModeCheckbox">
               <property name="text">
-               <string>Rate control</string>
+               <string>Client Hold</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
               </property>
              </widget>
             </item>

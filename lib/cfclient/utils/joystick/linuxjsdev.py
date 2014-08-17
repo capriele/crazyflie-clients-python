@@ -37,7 +37,7 @@ import platform
 import ctypes
 import fcntl
 
-from .constants import TYPE_BUTTON, TYPE_AXIS
+from .constants import TYPE_BUTTON, TYPE_AXIS, TYPE_MOTION
 from .jevent import JEvent
 
 if platform.system() != 'Linux':
@@ -52,11 +52,13 @@ JE_NUMBER = 3
 
 JS_EVENT_BUTTON = 0x001
 JS_EVENT_AXIS = 0x002
+JS_EVENT_BALLS = 0x003
 JS_EVENT_INIT = 0x080
 
 #ioctls
 JSIOCGAXES = 0x80016a11
 JSIOCGBUTTONS = 0x80016a12
+JSIOCGBALLS = 0x80016a13
 
 
 class Joystick():
@@ -68,6 +70,7 @@ class Joystick():
         self.opened = False
         self.buttons = []
         self.axes = []
+        self.balls = []
         self.jsfile = None
         self.device_id = -1
 
@@ -99,8 +102,17 @@ class Joystick():
 
         self.jsfile = open("/dev/input/js{}".format(self.device_id), "r")
         fcntl.fcntl(self.jsfile.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
+        
+        #Get number of balls, axis and button
+        val = ctypes.c_int()
+        if fcntl.ioctl(self.jsfile.fileno(), JSIOCGBALLS, val) != 0:
+            self.jsfile.close()
+            raise Exception("Failed to read number of balls")
+        self.balls = list(0 for i in range(val.value))
+        
+        print "MERDA"
+        print self.balls
 
-        #Get number of axis and button
         val = ctypes.c_int()
         if fcntl.ioctl(self.jsfile.fileno(), JSIOCGAXES, val) != 0:
             self.jsfile.close()
@@ -126,7 +138,7 @@ class Joystick():
 
     def __initvalues(self):
         """Read the buttons and axes initial values from the js device"""
-        for _ in range(len(self.axes) + len(self.buttons)):
+        for _ in range(len(self.balls) + len(self.axes) + len(self.buttons)):
             data = self.jsfile.read(struct.calcsize(JS_EVENT_FMT))
             jsdata = struct.unpack(JS_EVENT_FMT, data)
             self.__updatestate(jsdata)
@@ -135,6 +147,8 @@ class Joystick():
         """Update the internal absolute state of buttons and axes"""
         if jsdata[JE_TYPE] & JS_EVENT_AXIS != 0:
             self.axes[jsdata[JE_NUMBER]] = jsdata[JE_VALUE] / 32768.0
+        elif jsdata[JE_TYPE] & JS_EVENT_BALLS != 0:
+            self.balls[jsdata[JE_NUMBER]] = jsdata[JE_VALUE]
         elif jsdata[JE_TYPE] & JS_EVENT_BUTTON != 0:
             self.buttons[jsdata[JE_NUMBER]] = jsdata[JE_VALUE]
 
@@ -147,6 +161,10 @@ class Joystick():
                           value=jsdata[JE_VALUE] / 32768.0)
         if jsdata[JE_TYPE] & JS_EVENT_BUTTON != 0:
             return JEvent(type=TYPE_BUTTON,
+                          number=jsdata[JE_NUMBER],
+                          value=jsdata[JE_VALUE] / 32768.0)
+        if jsdata[JE_TYPE] & JS_EVENT_BALLS != 0:
+            return JEvent(type=TYPE_MOTION,
                           number=jsdata[JE_NUMBER],
                           value=jsdata[JE_VALUE] / 32768.0)
 

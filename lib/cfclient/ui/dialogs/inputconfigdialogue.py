@@ -67,6 +67,7 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
 
         self.rawinputreader.rawAxisUpdateSignal.connect(self.rawAxisUpdate)
         self.rawinputreader.rawButtonUpdateSignal.connect(self.rawButtonUpdate)
+        self.rawinputreader.rawBallsUpdateSignal.connect(self.rawBallsUpdate)
 
         self.cancelButton.clicked.connect(self.close)
         self.saveButton.clicked.connect(self.saveConfig)
@@ -120,6 +121,7 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
         self._reset_mapping()
         self.btnDetect = ""
         self.axisDetect = ""
+        self.ballsDetect = ""
         self.combinedDetection = 0
 
         for d in self.joystickReader.getAvailableDevices():
@@ -157,10 +159,13 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
                        "indicator": self.thrustAxisValue,
                        "scale":-1.0}
             }
+        
+        
 
     def cancelConfigBox(self, button):
         self.axisDetect = ""
         self.btnDetect = ""
+        self.ballsDetect = ""
 
     def showConfigBox(self, caption, message, directions=[]):
         self.box = QMessageBox()
@@ -233,6 +238,10 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
                         if (id == a):
                             pos = -1 if id ==  self.axismapping[m]["ids"][0] else 1
                             self.axismapping[m]["indicator"].setValue(50+data[a]*50*self.axismapping[m]["scale"]*pos)
+
+    def rawBallsUpdate(self, data):
+        if (len(self.ballsDetect) > 0):
+            self.ai.setRollPitch(-30, 0)
 
     def rawButtonUpdate(self, data):
         if (len(self.btnDetect) > 0):
@@ -437,6 +446,7 @@ class RawJoystickReader(QThread):
 
     rawAxisUpdateSignal = pyqtSignal(object)
     rawButtonUpdateSignal = pyqtSignal(object)
+    rawBallsUpdateSignal = pyqtSignal(object)
 
     def __init__(self, joystickReader):
         QThread.__init__(self)
@@ -454,6 +464,7 @@ class RawJoystickReader(QThread):
 
     @pyqtSlot()
     def read_input(self):
-        [rawaxis, rawbuttons] = self.joystickReader.readRawValues()
+        [rawaxis, rawbuttons, rawballs] = self.joystickReader.readRawValues()
         self.rawAxisUpdateSignal.emit(rawaxis)
         self.rawButtonUpdateSignal.emit(rawbuttons)
+        self.rawBallsUpdateSignal.emit(rawballs)
