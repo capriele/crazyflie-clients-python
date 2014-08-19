@@ -174,7 +174,7 @@ class AttitudeIndicator(QtGui.QWidget):
             qp.drawLine(w-fh*4.5,0,w-fh*4.5,pos_y) # vertical line     
             qp.drawLine(w-fh*4.7,0,w-fh*4.5,0) # left horizontal line
             qp.drawLine(w-fh*4.2,pos_y,w-fh*4.5,pos_y) #right horizontal line
-        
+        '''
         r = min(w,h)
         center = QtCore.QPoint(w/2, 0)
         qp.setBrush(QtGui.QColor(0, 0, 0, 0))
@@ -185,7 +185,7 @@ class AttitudeIndicator(QtGui.QWidget):
         qp.setPen(pen)
         for i in range(1, max(w,h)-r/2):
             qp.drawEllipse(center, r/2+i, r/2+i)
-
+        '''
 
 if __name__ == "__main__":
     class Example(QtGui.QWidget):

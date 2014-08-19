@@ -230,7 +230,7 @@ class FlightTab(Tab, flight_tab_class):
     
             self.ai.setRollPitch(-data["stabilizer.roll"],
                                  data["stabilizer.pitch"])
-            self.helper.cf.commander.setActualPoint(data)
+            #self.helper.cf.commander.setActualPoint(data)
 
     def connected(self, linkURI):
         # IMU & THRUST
