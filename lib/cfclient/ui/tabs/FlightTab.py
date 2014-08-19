@@ -432,7 +432,7 @@ class FlightTab(Tab, flight_tab_class):
         
     @pyqtSlot(bool)
     def changeCareFreemode(self, checked):
-        self.helper.cf.commander.set_client_carefreemode(checked)
+        #self.helper.cf.commander.set_client_carefreemode(checked)
         if checked:
             self.clientCareFreeModeRadio.setChecked(checked)
             self.helper.cf.param.set_value("FlightMode.flightmode", "0")
@@ -449,7 +449,7 @@ class FlightTab(Tab, flight_tab_class):
     @pyqtSlot(bool)
     def changePositionmode(self, checked):
         self.clientPositionModeRadio.setChecked(checked)
-        self.helper.cf.commander.set_client_positionmode(checked)
+        #self.helper.cf.commander.set_client_positionmode(checked)
         if checked:
             self.helper.cf.param.set_value("FlightMode.flightmode", "3")
             #self.helper.cf.commander.set_client_carefreemode(False)
@@ -460,7 +460,7 @@ class FlightTab(Tab, flight_tab_class):
     @pyqtSlot(bool)
     def changeXmode(self, checked):
         self.clientXModeRadio.setChecked(checked)
-        self.helper.cf.commander.set_client_xmode(checked)
+        #self.helper.cf.commander.set_client_xmode(checked)
         if checked:
             self.helper.cf.param.set_value("FlightMode.flightmode", "2")
             #self.helper.cf.commander.set_client_carefreemode(False)
