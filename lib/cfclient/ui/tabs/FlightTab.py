@@ -471,7 +471,7 @@ class FlightTab(Tab, flight_tab_class):
     @pyqtSlot(bool)
     def changeHoldmode(self, checked):
         self.clientHoldModeCheckbox.setChecked(checked)
-        self.helper.cf.commander.set_client_holdmode(checked)
+        #self.helper.cf.commander.set_client_holdmode(checked)
         GuiConfig().set("client_side_holdmode", checked)
         logger.info("Clientside Hold-mode enabled: %s", checked)
     
