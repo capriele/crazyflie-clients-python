@@ -61,6 +61,7 @@ class Commander():
         #########################
         ##        UTILS        ##
         #########################
+        self._actualGravity = None
         #self._yaw = 0            #used to convert copter's current yaw to radians
         #self._actualPoint = None #copter's current position update every 100ms
         #self._oldThrust = 0
@@ -103,6 +104,9 @@ class Commander():
     def setActualPoint(self, data):
         self._actualPoint = data
     '''
+    def setActualGravity(self, data):
+        self._actualGravity = data
+        
     def send_setpoint(self, roll, pitch, yaw, thrust):
         """
         Send a new control setpoint for roll/pitch/yaw/thust to the copter
@@ -110,6 +114,16 @@ class Commander():
         The arguments roll/pitch/yaw/trust is the new setpoints that should
         be sent to the copter
         """
+        accZ = 0
+        if self._actualGravity is not None:
+            accZ = self._actualGravity["acc.zw"]
+            #if accZ < -0.05:
+                #thrust = 65000*4/5
+                    
+        
+        if thrust > 65000*4/5:
+            thrust = 65000*4/5
+
         '''
         if roll != 0 or pitch != 0 or yaw != 0 or thrust != 0:
             self._oldThrust = 0
@@ -181,4 +195,14 @@ class Commander():
         pk.port = CRTPPort.COMMANDER
         pk.data = struct.pack('<fffH', roll, -pitch, yaw, thrust)
         self._cf.send_packet(pk)
+        
+    @staticmethod
+    def deadband(value, threshold):
+        if abs(value) < threshold:
+            value = 0
+        elif value > 0:
+            value -= threshold
+        elif value < 0:
+            value += threshold
+        return value/(1-threshold)
         

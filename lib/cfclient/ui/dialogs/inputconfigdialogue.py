@@ -39,6 +39,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from cfclient.ui.widgets.compass import CompassWidget
 from cfclient.utils.config_manager import ConfigManager
 from cflib.crtp.exceptions import CommunicationException
 from pygame.locals import *
@@ -67,7 +68,6 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
 
         self.rawinputreader.rawAxisUpdateSignal.connect(self.rawAxisUpdate)
         self.rawinputreader.rawButtonUpdateSignal.connect(self.rawButtonUpdate)
-        self.rawinputreader.rawBallsUpdateSignal.connect(self.rawBallsUpdate)
 
         self.cancelButton.clicked.connect(self.close)
         self.saveButton.clicked.connect(self.saveConfig)
@@ -98,10 +98,12 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
                                                     "Press the button for Flip Left"))  
         self.detectFlipRight.clicked.connect(lambda : self.doButtonDetect("flipright", "Flip Right",
                                                     "Press the button for Flip Right"))  
-        self.detectCalibrate.clicked.connect(lambda : self.doButtonDetect("calibrate", "Calibrate",
-                                                    "Press the button for calibrate the motors"))    
+        self.detectViscousMode.clicked.connect(lambda : self.doButtonDetect("viscousMode", "Viscous Mode",
+                                                    "Press the button for viscous mode activation"))    
         self.detectSwitchMode.clicked.connect(lambda : self.doButtonDetect("switchmode", "Switch Mode",
-                                                    "Press the button for changing fly modes"))        
+                                                    "Press the button for changing fly modes"))  
+        self.compass = CompassWidget()  
+        self.verticalLayout_2.addWidget(self.compass) 
 
         self.configButton.clicked.connect(self.startConfigOfInputDevice)
         self.loadButton.clicked.connect(self.loadConfig)
@@ -115,13 +117,12 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
                               self.detectRollPos, self.detectRollNeg,
                               self.detectKillswitch, self.detectExitapp,
                               self.detectAltHold, self.detectFlipLeft, 
-                              self.detectFlipRight, self.detectCalibrate, 
+                              self.detectFlipRight, self.detectViscousMode, 
                               self.detectSwitchMode]
 
         self._reset_mapping()
         self.btnDetect = ""
         self.axisDetect = ""
-        self.ballsDetect = ""
         self.combinedDetection = 0
 
         for d in self.joystickReader.getAvailableDevices():
@@ -141,7 +142,7 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
             "althold": {"id":-1, "indicator": self.althold},
             "flipleft": {"id":-1, "indicator": self.flipleft},
             "flipright": {"id":-1, "indicator": self.flipright},
-            "calibrate": {"id":-1, "indicator": self.calibrate},
+            "viscousMode": {"id":-1, "indicator": self.viscousMode},
             "switchmode": {"id":-1, "indicator": self.switchmode},
             }
 
@@ -157,6 +158,9 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
                     "scale":-1.0},
             "thrust": {"id":-1,
                        "indicator": self.thrustAxisValue,
+                       "scale":-1.0},
+            "joy_yaw": {"id":-1,
+                       "indicator": self.compass,
                        "scale":-1.0}
             }
         
@@ -165,7 +169,6 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
     def cancelConfigBox(self, button):
         self.axisDetect = ""
         self.btnDetect = ""
-        self.ballsDetect = ""
 
     def showConfigBox(self, caption, message, directions=[]):
         self.box = QMessageBox()
@@ -193,6 +196,14 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
             b.setEnabled(True)
 
     def rawAxisUpdate(self, data):
+        
+        yaw_joy = False
+        joyYaw = 19
+        '''
+        if joyYaw in data:
+            yaw_joy = True
+            self.axisDetect = "joy_yaw"
+        '''  
         if (len(self.axisDetect) > 0):
             if self.combinedButton and self.combinedButton.isChecked() and self.combinedDetection == 0:
                 self.combinedButton.setDisabled(True)
@@ -231,17 +242,19 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
         for a in data:
             for m in self.axismapping:
                 if "id" in self.axismapping[m]:
+                    value = 50+data[a]*50*self.axismapping[m]["scale"]
+                    if yaw_joy and self.axismapping[m]["id"] == joyYaw:
+                        value = data[joyYaw]*self.axismapping[m]["scale"]
                     if (self.axismapping[m]["id"] == a):
-                        self.axismapping[m]["indicator"].setValue(50+data[a]*50*self.axismapping[m]["scale"])
+                        self.axismapping[m]["indicator"].setValue(value)
                 else:
                     for id in self.axismapping[m]["ids"]:
                         if (id == a):
                             pos = -1 if id ==  self.axismapping[m]["ids"][0] else 1
-                            self.axismapping[m]["indicator"].setValue(50+data[a]*50*self.axismapping[m]["scale"]*pos)
-
-    def rawBallsUpdate(self, data):
-        if (len(self.ballsDetect) > 0):
-            self.ai.setRollPitch(-30, 0)
+                            value = 50+data[a]*50*self.axismapping[m]["scale"]*pos
+                            if yaw_joy and id == joyYaw:
+                                value = data[joyYaw]*self.axismapping[m]["scale"]
+                            self.axismapping[m]["indicator"].setValue(value)
 
     def rawButtonUpdate(self, data):
         if (len(self.btnDetect) > 0):
@@ -312,8 +325,8 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
             newKey = "flipleft"
         if ("flipright" in key):
             newKey = "flipright"
-        if ("calibrate" in key):
-            newKey = "calibrate"
+        if ("viscousMode" in key):
+            newKey = "viscousMode"
         if ("switchmode" in key):
             newKey = "switchmode"
         if (len(newKey) > 0):
@@ -411,8 +424,8 @@ class InputConfigDialogue(QtGui.QWidget, inputconfig_widget_class):
                 newC['key'] = "flipleft"
                 newC['name'] = a               
                 
-            if ("calibrate" in a):
-                newC['key'] = "calibrate"
+            if ("viscousMode" in a):
+                newC['key'] = "viscousMode"
                 newC['name'] = a  
                 
             if ("switchmode" in a):
@@ -446,7 +459,6 @@ class RawJoystickReader(QThread):
 
     rawAxisUpdateSignal = pyqtSignal(object)
     rawButtonUpdateSignal = pyqtSignal(object)
-    rawBallsUpdateSignal = pyqtSignal(object)
 
     def __init__(self, joystickReader):
         QThread.__init__(self)
@@ -464,7 +476,6 @@ class RawJoystickReader(QThread):
 
     @pyqtSlot()
     def read_input(self):
-        [rawaxis, rawbuttons, rawballs] = self.joystickReader.readRawValues()
+        [rawaxis, rawbuttons] = self.joystickReader.readRawValues()
         self.rawAxisUpdateSignal.emit(rawaxis)
         self.rawButtonUpdateSignal.emit(rawbuttons)
-        self.rawBallsUpdateSignal.emit(rawballs)

@@ -60,8 +60,7 @@ from cfclient.ui.dialogs.bootloader import BootloaderDialog
 from cfclient.ui.dialogs.about import AboutDialog
 
 (main_window_class,
-main_windows_base_class) = (uic.loadUiType(sys.path[0] +
-                                           '/cfclient/ui/main.ui'))
+main_windows_base_class) = (uic.loadUiType(sys.path[0] +'/cfclient/ui/main.ui'))
 
 
 class MyDockWidget(QtGui.QDockWidget):
@@ -310,7 +309,9 @@ class MainUI(QtGui.QMainWindow, main_window_class):
         self.logConfigDialogue.show()
 
     def updateBatteryVoltage(self, timestamp, data, logconf):
-        self.batteryBar.setValue(int(data["pm.vbat"] * 1000))
+        batteryVoltage = int(data["pm.vbat"] * 1000)
+        #self.joystickReader.setEmergencyLanding(batteryVoltage < 3000 and batteryVoltage-self.batteryBar.getValue() < 0)
+        self.batteryBar.setValue(batteryVoltage)
 
     def connectionDone(self, linkURI):
         self.setUIState(UIState.CONNECTED, linkURI)

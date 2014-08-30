@@ -30,4 +30,3 @@ Various constants used in the Joystick module
 #Constants
 TYPE_BUTTON = 1
 TYPE_AXIS = 2
-TYPE_MOTION = 3

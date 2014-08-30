@@ -7,6 +7,13 @@
         {
           "scale": -1.0, 
           "type": "Input.AXIS", 
+          "id": 19, 
+          "key": "joy_yaw", 
+          "name": "joy_yaw"
+        }, 
+        {
+          "scale": -1.0, 
+          "type": "Input.AXIS", 
           "id": 1, 
           "key": "thrust", 
           "name": "thrust"

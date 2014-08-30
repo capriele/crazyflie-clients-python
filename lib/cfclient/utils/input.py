@@ -61,7 +61,7 @@ from cfclient.utils.periodictimer import PeriodicTimer
 from cflib.utils.callbacks import Caller
 
 MAX_THRUST = 65000
-FLIP_TIME = 0.1 #time in seconds
+FLIP_TIME = 0.165 #time in seconds
 
 class JoystickReader:
     """
@@ -74,9 +74,14 @@ class JoystickReader:
         # TODO: Should be OS dependant
         self.inputdevice = PyGameReader()
         
-        self._motorsPower = [0, 0, 0, 0]
+        self.viscousModeThrust = 67
+        self._emergency_landing = False
+        self.auto = False
         self._min_thrust = 0
         self._max_thrust = 0
+        self._maxAltitude = 0
+        self.currentAltitude = 0
+        self.minAltitude = 0
         self._thrust_slew_rate = 0
         self._thrust_slew_enabled = False
         self._thrust_slew_limit = 0
@@ -86,14 +91,12 @@ class JoystickReader:
 
         self._old_thrust = 0
         self._old_alt_hold = False
-        self._old_flip = False
         self._old_flip_type = -1
         self._flip_time_start = -float("inf");
-        self._old_roll = 0
-        self._old_pitch = 0
 
         self._trim_roll = Config().get("trim_roll")
         self._trim_pitch = Config().get("trim_pitch")
+        self._trim_yaw = 0.0
 
         if (Config().get("flightmode") is "Normal"):
             self._max_yaw_rate = Config().get("normal_max_yaw")
@@ -154,9 +157,20 @@ class JoystickReader:
         self.device_discovery = Caller()
         self.device_error = Caller()
         self.althold_updated = Caller()
-
+        self.auto_input_updated = Caller() 
+        
+    def setViscousModeThrust(self, thrust):
+        if thrust >= 0:
+            self.viscousModeThrust = thrust
+    
+    def setEmergencyLanding(self, emergencyLanding):
+        self._emergency_landing = emergencyLanding
+        
     def setAltHoldAvailable(self, available):
         self._has_pressure_sensor = available
+        
+    def setAuto(self, auto):     
+        self.auto = auto 
 
     def setAltHold(self, althold):
         self._old_alt_hold = althold
@@ -250,6 +264,14 @@ class JoystickReader:
     def set_trim_pitch(self, trim_pitch):
         """Set a new value for the trim trim."""
         self._trim_pitch = trim_pitch
+        
+    def setMaxAltitude(self, maxAltitude):
+        self._maxAltitude = maxAltitude
+        
+    def setCurrentAltitude(self, altitude):
+        if altitude < self.minAltitude or self.minAltitude == 0:
+            self.minAltitude = altitude
+        self.currentAltitude = altitude
 
     def read_input(self):
         """Read input data from the selected device"""
@@ -266,72 +288,99 @@ class JoystickReader:
             althold = data["althold"]
             flipleft = data["flipleft"]
             flipright = data["flipright"]
-            calibrate = data["calibrate"]
+            viscousMode = data["viscousMode"]
             switchMode = data["switchmode"]
-            
-            #Se non premo nessun tasto
-            #if trim_roll == 0 and not flipright and thrust == 0 and not calibrate and pitch == 0 and not emergency_stop and not althold and not switchMode and yaw == 0 and roll == 0 and pitch == 0 and not flipleft:
-            #    return False
-            
-            #logger.warning("data: %s", data)
             
             if switchMode and self._canSwitch:
                 self._canSwitch = False
                 self.switch_mode_updated.call()
             elif not switchMode: 
                 self._canSwitch = True
-            
-            if calibrate:
-                self.input_updated.call(0, 0, 0, 20000)
-                time.sleep(0.1)
-                self._motorsPower[0] = 0
-                self._motorsPower[1] = 0
-                self._motorsPower[2] = 0
-                self._motorsPower[3] = 0
-                self.input_updated.call(0, 0, 0, 0)
 
             if (self._old_alt_hold != althold):
-                self.althold_updated.call(str(althold))
+                self.althold_updated.call(althold)
                 self._old_alt_hold = althold
 
             if self._emergency_stop != emergency_stop:
                 self._emergency_stop = emergency_stop
                 self.emergency_stop_updated.call(self._emergency_stop)
+                
+            if self.auto:
+                self.auto_input_updated.call(trim_roll, trim_pitch, yaw, thrust)
+            else:
+                # Altitude Hold Mode Toggled
+                if (self._old_alt_hold != althold):
+                    self.althold_updated.call(althold)
+                    self._old_alt_hold = althold
 
+
+                # Disable hover mode if enabled
+                if self._emergency_stop:
+                    if self._has_pressure_sensor:
+                        if  self._old_alt_hold:
+                            self.althold_updated.call(False)
+                            self._old_alt_hold = False
+                            althold = False
+
+            '''
+            modalità in cui il quad rimane fermo in altitudine e può salire o scendere in base a come si 
+            utilizza il joystick
+            thrust up (>0) => sale (costantemente)
+            thrust down (<0) => scende (costantemente)
+            '''
+            #calibrate = not emergency_stop
+            if viscousMode:
+                viscous_thrust = self.p2t(self.viscousModeThrust)
+                if raw_thrust > 0 and raw_thrust <= 0.5:
+                    raw_thrust = 1
+                elif raw_thrust > 0.5:
+                    raw_thrust = 2
+                elif raw_thrust >= -0.5 and raw_thrust < 0:
+                    raw_thrust = -0.5
+                elif raw_thrust < -0.5:
+                    raw_thrust = -1
+                '''
+                if (self.currentAltitude - self.minAltitude) == self._maxAltitude:
+                    raw_thrust = 0
+                elif (self.currentAltitude - self.minAltitude) > self._maxAltitude:
+                    raw_thrust = -0.2
+                '''  
+                thrust = int(round(viscous_thrust + raw_thrust*self.p2t(10)))
             # Thust limiting (slew, minimum and emergency stop)
-            if althold and self._has_pressure_sensor:
+            elif (althold and self._has_pressure_sensor) or (flipleft or flipright):
                 thrust = int(round(JoystickReader.deadband(thrust,0.2)*32767 + 32767)) #Convert to uint16
-            
             else:
                 if raw_thrust < 0.05 or emergency_stop:
                     thrust = 0
                 else:
                     thrust = self._min_thrust + thrust * (self._max_thrust - self._min_thrust)
-                if (self._thrust_slew_enabled == True and
-                    self._thrust_slew_limit > thrust and not emergency_stop):
+                if (self._thrust_slew_enabled == True and self._thrust_slew_limit > thrust and not emergency_stop):
+                #if (self._thrust_slew_enabled == True and not emergency_stop):
                     if self._old_thrust > self._thrust_slew_limit:
                         self._old_thrust = self._thrust_slew_limit
                     if thrust < (self._old_thrust - (self._thrust_slew_rate / 100)):
                         thrust = self._old_thrust - self._thrust_slew_rate / 100
                     if raw_thrust < 0 or thrust < self._min_thrust:
                         thrust = 0
-
+                        
+            #if trim_pitch > 0:
+            #    thrust += self.p2t(1)
+            #if trim_pitch < 0:
+            #    thrust -= self.p2t(1)
+            
+            if self._emergency_landing:
+                thrust = self._old_thrust - self.p2t(10)*0.2
+            
+            if thrust < 0: thrust = 0
             self._old_thrust = thrust
             # Yaw deadband
             # TODO: Add to input device config?
-            yaw = JoystickReader.deadband(yaw,0.2)*self._max_yaw_rate           
-
+            yaw = JoystickReader.deadband(yaw,0.2)*self._max_yaw_rate      
+                
             if trim_roll != 0 or trim_pitch != 0:
                 self._trim_roll += trim_roll
                 self._trim_pitch += trim_pitch
                 self.rp_trim_updated.call(self._trim_roll, self._trim_pitch)
-                
-            trimmed_roll = roll + self._trim_roll
-            trimmed_pitch = pitch + self._trim_pitch
-            
-            if not self._old_flip:
-                self._old_roll = self._trim_roll
-                self._old_pitch = self._trim_pitch
                 
             if (flipleft or flipright) and self._flip_time_start < 0:
                 self._flip_time_start = time.time(); #ricavo il momento in cui inizia il flip
@@ -341,35 +390,85 @@ class JoystickReader:
             if flipright:
                 self._old_flip_type = 1;
             
-           # if (flipleft or self.flipTimeControl(self._flip_time_start)) and self._old_flip_type == 0: ##and not self._old_flip:
-            if flipleft and self._old_flip_type == 0: ##and not self._old_flip:
-                thrust = self.p2t(25) #faccio in modo che il robot rimanga nella posizione corrente
-                self._trim_roll = 1200
-                self.rp_trim_updated.call(self._trim_roll, self._trim_pitch)
-            #elif (flipright or self.flipTimeControl(self._flip_time_start)) and self._old_flip_type == 1: ##and not self._old_flip:
-            elif flipright and self._old_flip_type == 1: ##and not self._old_flip:
-                thrust = self.p2t(25) #faccio in modo che il robot rimanga nella posizione corrente
-                self._trim_roll = -1200
-                self.rp_trim_updated.call(self._trim_roll, self._trim_pitch)
-                
-            self._old_flip = flipleft or flipright or self.flipTimeControl(self._flip_time_start)
+            #if (flipleft and self.flipTimeControl(self._flip_time_start)) and self._old_flip_type == 0:
+            if flipleft and self._old_flip_type == 0:
+                thrust = self.p2t(70) #faccio in modo che il robot rimanga nella posizione corrente
+                roll = 1600
+            #elif (flipright and self.flipTimeControl(self._flip_time_start)) and self._old_flip_type == 1: 
+            elif flipright and self._old_flip_type == 1:
+                #thrust = self.p2t(70)
+                #roll = 30
+                #self.input_updated.call(roll, 0, yaw, thrust)
+                #time.sleep(0.04)
+                thrust = self.p2t(50)
+                roll = -1000
+                self.input_updated.call(roll, 0, yaw, thrust)
+                #time.sleep(FLIP_TIME)
+                '''
+                #######
+                ## 1 ##
+                #######
+                thrust = self.p2t(70) #faccio in modo che il robot rimanga nella posizione corrente
+                roll = 30
+                self.input_updated.call(roll, 0, yaw, thrust)
+                time.sleep(0.004)
+                #######
+                ## 2 ##
+                #######
+                thrust = self.p2t(50)
+                roll = -1600
+                self.input_updated.call(roll, 0, yaw, thrust)
+                time.sleep(0.004)
+                #######
+                ## 3 ##
+                #######
+                thrust = 0
+                roll = 0
+                self.input_updated.call(roll, 0, yaw, thrust)
+                time.sleep(0.0004)
+                #######
+                ## 4 ##
+                #######
+                thrust = self.p2t(50)
+                roll = -1600
+                self.input_updated.call(roll, 0, yaw, thrust)
+                time.sleep(0.004)
+                #######
+                ## 5 ##
+                #######
+                thrust = self.p2t(70)
+                roll = 30
+                self.input_updated.call(roll, 0, yaw, thrust)
+                time.sleep(0.004)
+                #######
+                ## 6 ##
+                #######
+                thrust = self.p2t(53) 
+                roll = 0
+                self.input_updated.call(roll, 0, yaw, thrust)
+                return;
+                '''
+    
+            trimmed_roll = roll + self._trim_roll
+            trimmed_pitch = pitch + self._trim_pitch
             
             if not flipleft and not flipright and not self.flipTimeControl(self._flip_time_start):
                 self._old_flip_type = -1;
                 self._flip_time_start = -float("inf"); #resetto _flip_time_start
-                self._trim_roll = self._old_roll
-                self._trim_pitch = self._old_pitch
                 self.rp_trim_updated.call(self._trim_roll, self._trim_pitch)
                 trimmed_roll = roll + self._trim_roll
                 trimmed_pitch = pitch + self._trim_pitch
-                
+            
+            #yaw = yaw + self._trim_yaw
             
             self.input_updated.call(trimmed_roll, trimmed_pitch, yaw, thrust)
         except Exception:
             logger.warning("Exception while reading inputdevice: %s", traceback.format_exc())
             self.device_error.call("Error reading from input device\n\n%s" % traceback.format_exc())
             self._read_timer.stop()
-
+    
+    def update_trim_yaw_signal(self, yaw):
+        self._trim_yaw = yaw
     @staticmethod
     def p2t(percentage):
         """Convert a percentage to raw thrust"""

@@ -31,9 +31,25 @@ PyGames.
 import pygame
 import pygame.locals
 
-from .constants import TYPE_BUTTON, TYPE_AXIS, TYPE_MOTION
-from .jevent import JEvent
+TYPE_BUTTON = 1
+TYPE_AXIS = 2
 
+class JEvent(object):
+    """
+    Joystick event class. Encapsulate single joystick event.
+    """
+    def __init__(self, type, number, value):
+        self.type = type
+        self.number = number
+        self.value = value
+
+    def __repr__(self):
+        return "JEvent(type={}, number={}, value={})".format(self.type,
+                   self.number, self.value)
+'''
+from .constants import TYPE_BUTTON, TYPE_AXIS
+from .jevent import JEvent
+'''
 
 class Joystick:
     """
@@ -44,7 +60,6 @@ class Joystick:
         self.opened = False
         self.buttons = []
         self.axes = []
-        self.motions = []
         self.joy = None
         self.device_id = -1
 
@@ -74,7 +89,6 @@ class Joystick:
 
         self.axes = list(0 for i in range(self.joy.get_numaxes()))
         self.buttons = list(0 for i in range(self.joy.get_numbuttons()))
-        self.motions = list(0 for i in range(self.joy.get_numballs()))
 
     def close(self):
         """ Open the joystick device """
@@ -91,7 +105,7 @@ class Joystick:
                                      number=evt.button,
                                      value=1))
                 self.buttons[evt.button] = 1
-            if evt.vttype == pygame.locals.JOYBUTTONUP:
+            if evt.type == pygame.locals.JOYBUTTONUP:
                 events.append(JEvent(type=TYPE_BUTTON,
                                      number=evt.button,
                                      value=0))
@@ -102,11 +116,12 @@ class Joystick:
                                      number=evt.axis,
                                      value=self.joy.get_axis(evt.axis)))
                 self.axes[evt.axis] = self.joy.get_axis(evt.axis)
-                
-            if evt.type == pygame.locals.JOYBALLMOTION:
-                events.append(JEvent(type=TYPE_MOTION,
-                                     number=evt.balls,
-                                     value=self.joy.get_ball(evt.balls)))
-                self.motions[evt.balls] = self.joy.get_ball(evt.balls)
-
+                print self.axes
         return events
+
+if __name__ == "__main__":
+    d = Joystick()
+    d.available_devices()
+    d.open(0)
+    while True:
+        d.get_events()

@@ -44,7 +44,7 @@ class PyGameReader():
     def start_input(self, deviceId, inputMap):
         """Initalize the reading and open the device with deviceId and set the mapping for axis/buttons using the
         inputMap"""
-        self.data = {"roll":0.0, "pitch":0.0, "yaw":0.0, "thrust":0.0, "pitchcal":0.0, "rollcal":0.0, "estop": False, "exit":False, "althold":False, "flipleft":False, "flipright":False, "calibrate":False, "switchmode":False,}
+        self.data = {"roll":0.0, "pitch":0.0, "yaw":0.0, "thrust":0.0, "joy_yaw":0.0, "pitchcal":0.0, "rollcal":0.0, "estop": True, "exit":False, "althold":False, "flipleft":False, "flipright":False, "viscousMode":False, "switchmode":False,}
         self.inputMap = inputMap
         self.j = pygame.joystick.Joystick(deviceId)
         self.j.init()
@@ -57,20 +57,7 @@ class PyGameReader():
         self.data["rollcal"]  = 0.0
         
         for e in pygame.event.get():
-          if e.type == pygame.locals.JOYBALLMOTION:
-            index = "Input.BALLS-%d" % e.balls 
-            try:
-                if (self.inputMap[index]["type"] == "Input.BALLS"):
-                    key = self.inputMap[index]["key"]
-                    ballsvalue = self.j.get_ball(e.balls)
-                    # All balls are in the range [-a,+a]
-                    ballsvalue = ballsvalue * self.inputMap[index]["scale"]
-                    # The value is now in the correct direction and in the range [-1,1]
-                    self.data[key] = ballsvalue
-            except Exception:
-                # Balls not mapped, ignore..
-                pass    
-            
+         
           if e.type == pygame.locals.JOYAXISMOTION:
             index = "Input.AXIS-%d" % e.axis 
             try:
@@ -100,8 +87,8 @@ class PyGameReader():
                         self.data["flipleft"] = not self.data["flipleft"]   
                     elif (key == "flipright"):
                         self.data["flipright"] = not self.data["flipright"]    
-                    elif (key == "calibrate"):
-                        self.data["calibrate"] = not self.data["calibrate"]   
+                    elif (key == "viscousMode"):
+                        self.data["viscousMode"] = not self.data["viscousMode"]   
                     elif (key == "switchmode"):
                         self.data["switchmode"] = not self.data["switchmode"]                        
                     else: # Generic cal for pitch/roll
@@ -122,8 +109,8 @@ class PyGameReader():
                         self.data["flipleft"] = False     
                     if (key == "flipright"):
                         self.data["flipright"] = False   
-                    if (key == "calibrate"):
-                        self.data["calibrate"] = False     
+                    if (key == "viscousMode"):
+                        self.data["viscousMode"] = False     
                     if (key == "switchmode"):
                         self.data["switchmode"] = False                     
             except Exception:
@@ -147,7 +134,6 @@ class PyGameReader():
         """Read out the raw values from the device"""
         rawaxis = {}
         rawbutton = {}
-        rawballs = {}
 
         for e in pygame.event.get():
             if e.type == pygame.locals.JOYBUTTONDOWN:
@@ -156,10 +142,8 @@ class PyGameReader():
                 rawbutton[e.button] = 0
             if e.type == pygame.locals.JOYAXISMOTION:
                 rawaxis[e.axis] = self.j.get_axis(e.axis)
-            if e.type == pygame.locals.JOYBALLMOTION:
-                rawaxis[e.balls] = self.j.get_ball(e.balls)
 
-        return [rawaxis,rawbutton, rawballs]
+        return [rawaxis,rawbutton]
 
     def getAvailableDevices(self):
         """List all the available devices."""
